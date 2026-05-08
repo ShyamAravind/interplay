@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+
+# build files
+dist/
+build/
+
+# env files
+.env
+.env.local
+.env.production
+
+# uploads (optional)
+uploads/
+
+# logs
+logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel/
+
+# Render
+.render/
+
+# IDE
+.vscode/
+.idea/

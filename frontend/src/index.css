@@ -1,0 +1,200 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens ─── */
+:root {
+  --color-primary: #0a1628;
+  --color-primary-light: #12234a;
+  --color-primary-lighter: #1a3166;
+  --color-accent: #39ff14;
+  --color-accent-dim: #2bcc10;
+  --color-accent-glow: rgba(57, 255, 20, 0.3);
+  --color-surface: #0f1d35;
+  --color-surface-light: #162544;
+  --color-card: #111d33;
+  --color-card-hover: #162a4a;
+  --color-text: #f0f4f8;
+  --color-text-muted: #8899aa;
+  --color-text-dim: #556677;
+  --color-border: #1e3355;
+  --color-danger: #ff4757;
+  --color-warning: #ffa502;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.light {
+  --color-primary: #f0f4f8;
+  --color-primary-light: #e2e8f0;
+  --color-primary-lighter: #cbd5e0;
+  --color-accent: #16a34a;
+  --color-accent-dim: #15803d;
+  --color-accent-glow: rgba(22, 163, 74, 0.2);
+  --color-surface: #ffffff;
+  --color-surface-light: #f7fafc;
+  --color-card: #ffffff;
+  --color-card-hover: #f7fafc;
+  --color-text: #0f1d35;
+  --color-text-muted: #4a5568;
+  --color-text-dim: #718096;
+  --color-border: #e2e8f0;
+}
+
+/* ─── Base ─── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-primary);
+  color: var(--color-text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-dim);
+}
+
+/* ─── Utility Classes ─── */
+.glass {
+  background: rgba(15, 29, 53, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border);
+}
+
+.light .glass {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.glow-accent {
+  box-shadow: 0 0 20px var(--color-accent-glow), 0 0 60px rgba(57, 255, 20, 0.1);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-accent), #00ff88);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dim));
+  color: #0a1628;
+  font-weight: 700;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.875rem;
+  letter-spacing: 0.025em;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px var(--color-accent-glow);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-accent);
+  font-weight: 600;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.75rem;
+  border: 1.5px solid var(--color-accent);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+}
+.btn-outline:hover {
+  background: rgba(57, 255, 20, 0.1);
+  transform: translateY(-1px);
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: 0.75rem;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  outline: none;
+}
+.input-field:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+.input-field::placeholder {
+  color: var(--color-text-dim);
+}
+
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card:hover {
+  background: var(--color-card-hover);
+  border-color: var(--color-accent);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 20px var(--color-accent-glow);
+}
+
+/* ─── Sport Badges ─── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 2rem;
+  text-transform: capitalize;
+}
+.badge-sport {
+  background: rgba(57, 255, 20, 0.15);
+  color: var(--color-accent);
+  border: 1px solid rgba(57, 255, 20, 0.3);
+}
+
+/* ─── Animations ─── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px var(--color-accent-glow); }
+  50% { box-shadow: 0 0 30px var(--color-accent-glow), 0 0 60px rgba(57, 255, 20, 0.1); }
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}

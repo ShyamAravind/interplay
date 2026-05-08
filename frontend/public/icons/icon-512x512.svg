@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#0a1628"/>
+  <circle cx="256" cy="230" r="120" fill="none" stroke="#39ff14" stroke-width="14"/>
+  <polygon points="224,180 224,280 310,230" fill="#39ff14"/>
+  <text x="256" y="420" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="54" fill="#f0f4f8">InterPlay</text>
+</svg>
