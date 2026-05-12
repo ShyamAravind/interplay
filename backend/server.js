@@ -19,7 +19,10 @@ connectDB();
 
 // Middleware
 app.use(cors({
-    origin: "https://interplay-two.vercel.app",
+    origin: [
+        "https://interplay1.vercel.app",
+        "https://interplay-two.vercel.app"
+    ],
     credentials: true
 }));
 app.use(express.json());
