@@ -13,6 +13,7 @@ import EventDetailPage from './pages/EventDetailPage';
 import CreateEventPage from './pages/CreateEventPage';
 import ProfilePage from './pages/ProfilePage';
 import DashboardPage from './pages/DashboardPage';
+import ManageEventPage from './pages/ManageEventPage';
 import NearbyEventsPage from './pages/NearbyEventsPage';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com';
@@ -55,6 +56,11 @@ export default function App() {
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
                     <DashboardPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/manage/:id" element={
+                  <ProtectedRoute>
+                    <ManageEventPage />
                   </ProtectedRoute>
                 } />
               </Routes>

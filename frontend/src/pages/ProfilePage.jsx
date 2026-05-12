@@ -4,8 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import API from '../services/api';
 import EventCard from '../components/EventCard';
-import { IoCalendar, IoTrophy, IoBookmark, IoStatsChart, IoChevronForward, IoPerson, IoMail, IoTime, IoGridOutline } from 'react-icons/io5';
-import { MdDashboard } from 'react-icons/md';
+import { IoCalendar, IoTrophy, IoBookmark, IoStatsChart, IoPerson, IoMail, IoTime, IoGridOutline, IoPeople, IoSettings } from 'react-icons/io5';
 
 const sectionStyle = {
     background: 'var(--color-card)', border: '1px solid var(--color-border)',
@@ -19,15 +18,15 @@ const statCard = {
 const infoRow = { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 0', borderBottom: '1px solid var(--color-border)' };
 const statusBadge = (status) => ({
     display: 'inline-block', padding: '0.2rem 0.65rem', borderRadius: '2rem', fontSize: '0.7rem', fontWeight: 600,
-    background: status === 'Confirmed' ? 'rgba(34,197,94,0.15)' : status === 'Upcoming' ? 'rgba(59,130,246,0.15)' : 'rgba(250,204,21,0.15)',
-    color: status === 'Confirmed' ? '#22c55e' : status === 'Upcoming' ? '#3b82f6' : '#facc15',
-    border: `1px solid ${status === 'Confirmed' ? 'rgba(34,197,94,0.3)' : status === 'Upcoming' ? 'rgba(59,130,246,0.3)' : 'rgba(250,204,21,0.3)'}`,
+    background: status === 'Confirmed' ? 'rgba(34,197,94,0.15)' : status === 'Upcoming' ? 'rgba(59,130,246,0.15)' : status === 'Completed' ? 'rgba(107,114,128,0.15)' : 'rgba(250,204,21,0.15)',
+    color: status === 'Confirmed' ? '#22c55e' : status === 'Upcoming' ? '#3b82f6' : status === 'Completed' ? '#9ca3af' : '#facc15',
+    border: `1px solid ${status === 'Confirmed' ? 'rgba(34,197,94,0.3)' : status === 'Upcoming' ? 'rgba(59,130,246,0.3)' : status === 'Completed' ? 'rgba(107,114,128,0.3)' : 'rgba(250,204,21,0.3)'}`,
 });
 
 export default function ProfilePage() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const [events, setEvents] = useState([]);
+    const [createdEvents, setCreatedEvents] = useState([]);
     const [savedEvents, setSavedEvents] = useState([]);
     const [joinedEvents, setJoinedEvents] = useState([]);
     const [activeTab, setActiveTab] = useState('overview');
@@ -37,14 +36,11 @@ export default function ProfilePage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const promises = [
+                await Promise.all([
                     API.get('/saved').then(r => setSavedEvents(r.data)).catch(() => {}),
                     API.get('/bookings').then(r => setJoinedEvents(r.data)).catch(() => {}),
-                ];
-                if (user?.role === 'organizer') {
-                    promises.push(API.get(`/users/${user._id}/events`).then(r => setEvents(r.data)).catch(() => {}));
-                }
-                await Promise.all(promises);
+                    API.get('/events/my-created-events').then(r => setCreatedEvents(r.data)).catch(() => {}),
+                ]);
             } catch (err) { console.error(err); }
             finally { setLoading(false); }
         };
@@ -55,15 +51,15 @@ export default function ProfilePage() {
 
     const uniqueSports = [...new Set([
         ...joinedEvents.map(e => e.sport),
-        ...events.map(e => e.sport),
+        ...createdEvents.map(e => e.sport),
     ].filter(Boolean))];
-    const upcomingCount = [...joinedEvents, ...events].filter(e => new Date(e.date) > new Date()).length;
+    const upcomingCount = [...joinedEvents, ...createdEvents].filter(e => new Date(e.date) > new Date()).length;
     const memberSince = user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
 
     const tabs = [
         { key: 'overview', label: 'Overview', icon: <IoGridOutline size={15} /> },
-        { key: 'registered', label: `Registered (${joinedEvents.length})`, icon: <IoCalendar size={15} /> },
-        ...(user?.role === 'organizer' ? [{ key: 'created', label: `Created (${events.length})`, icon: <IoTrophy size={15} /> }] : []),
+        { key: 'registered', label: `Joined (${joinedEvents.length})`, icon: <IoCalendar size={15} /> },
+        { key: 'created', label: `Created (${createdEvents.length})`, icon: <IoTrophy size={15} /> },
         { key: 'saved', label: `Saved (${savedEvents.length})`, icon: <IoBookmark size={15} /> },
     ];
 
@@ -95,14 +91,7 @@ export default function ProfilePage() {
                             <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>📅 Joined {memberSince}</span>
                         </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {user?.role === 'organizer' && (
-                            <Link to="/dashboard" className="btn-primary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.8rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                <MdDashboard size={16} /> Dashboard
-                            </Link>
-                        )}
-                        <button className="btn-outline" onClick={handleLogout} style={{ padding: '0.5rem 1.25rem', fontSize: '0.8rem' }}>Logout</button>
-                    </div>
+                    <button className="btn-outline" onClick={handleLogout} style={{ padding: '0.5rem 1.25rem', fontSize: '0.8rem' }}>Logout</button>
                 </div>
 
                 {/* Tabs */}
@@ -120,17 +109,16 @@ export default function ProfilePage() {
                     ))}
                 </div>
 
-                {/* Overview Tab */}
+                {/* ═══ Overview Tab ═══ */}
                 {activeTab === 'overview' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        {/* Activity Summary */}
                         <div style={sectionStyle}>
                             <h2 style={sectionTitle}><IoStatsChart size={18} style={{ color: 'var(--color-accent)' }} /> Activity Summary</h2>
                             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                                 {[
-                                    { label: 'Events Registered', value: joinedEvents.length, color: '#3b82f6', icon: '🎯' },
-                                    { label: 'Events Created', value: events.length, color: '#22c55e', icon: '📋' },
-                                    { label: 'Sports Participated', value: uniqueSports.length, color: '#f59e0b', icon: '🏅' },
+                                    { label: 'Events Joined', value: joinedEvents.length, color: '#3b82f6', icon: '🎯' },
+                                    { label: 'Events Created', value: createdEvents.length, color: '#22c55e', icon: '📋' },
+                                    { label: 'Events Saved', value: savedEvents.length, color: '#f59e0b', icon: '🔖' },
                                     { label: 'Upcoming Events', value: upcomingCount, color: '#8b5cf6', icon: '📆' },
                                 ].map((s, i) => (
                                     <motion.div key={i} style={statCard} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
@@ -142,7 +130,6 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* Personal Information */}
                         <div style={sectionStyle}>
                             <h2 style={sectionTitle}><IoPerson size={18} style={{ color: 'var(--color-accent)' }} /> Personal Information</h2>
                             <div style={infoRow}><IoPerson size={16} style={{ color: 'var(--color-text-dim)' }} /> <div><div style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>Full Name</div><div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user?.name}</div></div></div>
@@ -150,7 +137,6 @@ export default function ProfilePage() {
                             <div style={{ ...infoRow, borderBottom: 'none' }}><IoTime size={16} style={{ color: 'var(--color-text-dim)' }} /> <div><div style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>Account Created</div><div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{memberSince}</div></div></div>
                         </div>
 
-                        {/* Sports Participated */}
                         {uniqueSports.length > 0 && (
                             <div style={sectionStyle}>
                                 <h2 style={sectionTitle}><IoTrophy size={18} style={{ color: 'var(--color-accent)' }} /> Sports Participated</h2>
@@ -162,16 +148,15 @@ export default function ProfilePage() {
                     </motion.div>
                 )}
 
-                {/* Registered Events Tab */}
+                {/* ═══ Joined Events Tab ═══ */}
                 {activeTab === 'registered' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                         {loading ? <LoadingSkeleton /> : joinedEvents.length === 0 ? (
-                            <EmptyState icon="🎯" title="No Registered Events" desc="Browse events and join your first game!" />
+                            <EmptyState icon="🎯" title="No Joined Events" desc="Browse events and join your first game!" />
                         ) : (
                             <>
-                                {/* Table view */}
                                 <div style={{ ...sectionStyle, overflowX: 'auto' }}>
-                                    <h2 style={sectionTitle}><IoCalendar size={18} style={{ color: 'var(--color-accent)' }} /> Your Registered Events</h2>
+                                    <h2 style={sectionTitle}><IoCalendar size={18} style={{ color: 'var(--color-accent)' }} /> Your Joined Events</h2>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                                         <thead><tr style={{ borderBottom: '2px solid var(--color-border)' }}>
                                             {['Event', 'Sport', 'Date', 'Location', 'Status'].map(h => <th key={h} style={{ textAlign: 'left', padding: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>{h}</th>)}
@@ -181,7 +166,7 @@ export default function ProfilePage() {
                                                 const isPast = new Date(e.date) < new Date();
                                                 const status = isPast ? 'Completed' : 'Confirmed';
                                                 return (
-                                                    <tr key={e._id || i} style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.2s' }}>
+                                                    <tr key={e._id || i} style={{ borderBottom: '1px solid var(--color-border)' }}>
                                                         <td style={{ padding: '0.75rem', fontWeight: 600 }}>{e.title}</td>
                                                         <td style={{ padding: '0.75rem' }}><span className="badge badge-sport" style={{ textTransform: 'capitalize' }}>{e.sport}</span></td>
                                                         <td style={{ padding: '0.75rem', color: 'var(--color-text-muted)' }}>{new Date(e.date).toLocaleDateString()}</td>
@@ -193,7 +178,6 @@ export default function ProfilePage() {
                                         </tbody>
                                     </table>
                                 </div>
-                                {/* Card view */}
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: '1.25rem' }}>
                                     {joinedEvents.map((evt, i) => <EventCard key={evt._id} event={evt} index={i} />)}
                                 </div>
@@ -202,45 +186,84 @@ export default function ProfilePage() {
                     </motion.div>
                 )}
 
-                {/* Created Events Tab */}
+                {/* ═══ Created Events Tab ═══ */}
                 {activeTab === 'created' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        {loading ? <LoadingSkeleton /> : events.length === 0 ? (
+                        {loading ? <LoadingSkeleton /> : createdEvents.length === 0 ? (
                             <EmptyState icon="📋" title="No Events Created" desc="Create your first event to get started!" />
                         ) : (
                             <>
                                 <div style={{ ...sectionStyle, overflowX: 'auto' }}>
-                                    <h2 style={sectionTitle}><IoTrophy size={18} style={{ color: 'var(--color-accent)' }} /> Events You Organized</h2>
+                                    <h2 style={sectionTitle}><IoTrophy size={18} style={{ color: 'var(--color-accent)' }} /> Events You Created</h2>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                                         <thead><tr style={{ borderBottom: '2px solid var(--color-border)' }}>
-                                            {['Event', 'Date', 'Available Slots', 'Participants', 'Status'].map(h => <th key={h} style={{ textAlign: 'left', padding: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>{h}</th>)}
+                                            {['Event', 'Sport', 'Date', 'Location', 'Slots', 'Registrations', 'Fill %', 'Status', 'Action'].map(h =>
+                                                <th key={h} style={{ textAlign: 'left', padding: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>{h}</th>
+                                            )}
                                         </tr></thead>
                                         <tbody>
-                                            {events.map((e, i) => {
-                                                const participants = (e.totalSlots || 0) - (e.availableSlots || 0);
+                                            {createdEvents.map((e, i) => {
+                                                const regCount = e.registrationCount || 0;
+                                                const fillPct = e.fillPercentage || 0;
                                                 const isPast = new Date(e.date) < new Date();
+                                                const fillColor = fillPct >= 80 ? '#22c55e' : fillPct >= 50 ? '#f59e0b' : '#3b82f6';
                                                 return (
                                                     <tr key={e._id || i} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                                                        <td style={{ padding: '0.75rem', fontWeight: 600 }}>{e.title}</td>
-                                                        <td style={{ padding: '0.75rem', color: 'var(--color-text-muted)' }}>{new Date(e.date).toLocaleDateString()}</td>
-                                                        <td style={{ padding: '0.75rem' }}>{e.availableSlots || 0} / {e.totalSlots || 0}</td>
-                                                        <td style={{ padding: '0.75rem', fontWeight: 600 }}>{participants}</td>
+                                                        <td style={{ padding: '0.75rem', fontWeight: 600, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</td>
+                                                        <td style={{ padding: '0.75rem' }}><span className="badge badge-sport" style={{ textTransform: 'capitalize' }}>{e.sport}</span></td>
+                                                        <td style={{ padding: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>{new Date(e.date).toLocaleDateString()}</td>
+                                                        <td style={{ padding: '0.75rem', color: 'var(--color-text-muted)', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.location}</td>
+                                                        <td style={{ padding: '0.75rem' }}>{e.availableSlots}/{e.totalSlots || '∞'}</td>
+                                                        <td style={{ padding: '0.75rem', fontWeight: 700, color: 'var(--color-accent)' }}>{regCount}</td>
+                                                        <td style={{ padding: '0.75rem' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                                <div style={{ width: '50px', height: '5px', borderRadius: '3px', background: 'var(--color-border)', overflow: 'hidden' }}>
+                                                                    <div style={{ width: `${fillPct}%`, height: '100%', borderRadius: '3px', background: fillColor }} />
+                                                                </div>
+                                                                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: fillColor }}>{fillPct}%</span>
+                                                            </div>
+                                                        </td>
                                                         <td style={{ padding: '0.75rem' }}><span style={statusBadge(isPast ? 'Completed' : 'Upcoming')}>{isPast ? 'Completed' : 'Upcoming'}</span></td>
+                                                        <td style={{ padding: '0.75rem' }}>
+                                                            <Link to={`/manage/${e._id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none', background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-dim))', color: '#0a1628', transition: 'transform 0.2s' }}>
+                                                                <IoSettings size={13} /> Manage
+                                                            </Link>
+                                                        </td>
                                                     </tr>
                                                 );
                                             })}
                                         </tbody>
                                     </table>
                                 </div>
+
+                                {/* Created Event Cards with Manage Button */}
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: '1.25rem' }}>
-                                    {events.map((evt, i) => <EventCard key={evt._id} event={evt} index={i} />)}
+                                    {createdEvents.map((evt, i) => (
+                                        <div key={evt._id} style={{ position: 'relative' }}>
+                                            <EventCard event={evt} index={i} />
+                                            <Link to={`/manage/${evt._id}`} style={{
+                                                position: 'absolute', bottom: '1rem', right: '1rem',
+                                                display: 'flex', alignItems: 'center', gap: '0.3rem',
+                                                padding: '0.45rem 1rem', borderRadius: '0.6rem',
+                                                fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none', zIndex: 5,
+                                                background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-dim))',
+                                                color: '#0a1628', boxShadow: '0 4px 15px var(--color-accent-glow)',
+                                                transition: 'transform 0.2s',
+                                            }}
+                                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                            >
+                                                <IoSettings size={14} /> Manage Event
+                                            </Link>
+                                        </div>
+                                    ))}
                                 </div>
                             </>
                         )}
                     </motion.div>
                 )}
 
-                {/* Saved Events Tab */}
+                {/* ═══ Saved Events Tab ═══ */}
                 {activeTab === 'saved' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                         {loading ? <LoadingSkeleton /> : savedEvents.length === 0 ? (

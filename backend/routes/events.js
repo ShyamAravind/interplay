@@ -1,5 +1,6 @@
 const express = require('express');
 const Event = require('../models/Event');
+const Booking = require('../models/Booking');
 const { protect } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
@@ -49,6 +50,75 @@ router.get('/districts', async (req, res) => {
         'Tiruvannamalai', 'Tiruvarur', 'Vellore', 'Viluppuram', 'Virudhunagar',
     ];
     res.json({ districts });
+});
+
+// GET /api/events/my-created-events — Get events created by logged-in user
+router.get('/my-created-events', protect, async (req, res) => {
+    try {
+        const events = await Event.find({ organizerId: req.user._id })
+            .populate('organizerId', 'name email')
+            .sort({ date: -1 });
+
+        // Attach registration count to each event
+        const eventsWithCounts = await Promise.all(
+            events.map(async (event) => {
+                const regCount = await Booking.countDocuments({ eventId: event._id });
+                const obj = event.toObject();
+                obj.registrationCount = regCount;
+                obj.fillPercentage = event.totalSlots > 0
+                    ? Math.round((regCount / event.totalSlots) * 100)
+                    : 0;
+                return obj;
+            })
+        );
+
+        res.json(eventsWithCounts);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// GET /api/events/:id/participants — Get participants for an event (owner only)
+router.get('/:id/participants', protect, async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // Only the event creator can view participants
+        if (event.organizerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Only the event organizer can view participants' });
+        }
+
+        const bookings = await Booking.find({ eventId: req.params.id })
+            .populate('userId', 'name email createdAt')
+            .sort({ createdAt: -1 });
+
+        const participants = bookings
+            .filter(b => b.userId)
+            .map(b => ({
+                _id: b._id,
+                name: b.userId.name,
+                email: b.userId.email,
+                registrationDate: b.createdAt,
+                status: 'Confirmed',
+            }));
+
+        const regCount = participants.length;
+
+        res.json({
+            eventId: event._id,
+            eventTitle: event.title,
+            totalSlots: event.totalSlots,
+            availableSlots: event.availableSlots,
+            registrationCount: regCount,
+            fillPercentage: event.totalSlots > 0 ? Math.round((regCount / event.totalSlots) * 100) : 0,
+            participants,
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
 });
 
 // GET /api/events — List events with filters
@@ -102,6 +172,68 @@ router.get('/', async (req, res) => {
             page: parseInt(page),
             pages: Math.ceil(total / parseInt(limit)),
         });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// PUT /api/events/:id — Update event (owner only)
+router.put('/:id', protect, upload.single('posterImage'), async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (event.organizerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Only the event organizer can update this event' });
+        }
+
+        const { title, sport, description, date, location, district, registrationLink, price, totalSlots, isTournament } = req.body;
+
+        if (title) event.title = title;
+        if (sport) event.sport = sport;
+        if (description) event.description = description;
+        if (date) event.date = date;
+        if (location) event.location = location;
+        if (district !== undefined) event.district = district;
+        if (registrationLink !== undefined) event.registrationLink = registrationLink;
+        if (price !== undefined) event.price = parseFloat(price) || 0;
+        if (totalSlots !== undefined) {
+            const newSlots = parseInt(totalSlots) || 0;
+            const diff = newSlots - event.totalSlots;
+            event.totalSlots = newSlots;
+            event.availableSlots = Math.max(0, event.availableSlots + diff);
+        }
+        if (isTournament !== undefined) event.isTournament = isTournament === 'true' || isTournament === true;
+        if (req.file) event.posterImage = `/uploads/${req.file.filename}`;
+
+        await event.save();
+        await event.populate('organizerId', 'name email');
+
+        res.json(event);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// DELETE /api/events/:id — Delete event (owner only)
+router.delete('/:id', protect, async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (event.organizerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Only the event organizer can delete this event' });
+        }
+
+        // Delete all bookings for this event
+        await Booking.deleteMany({ eventId: event._id });
+        await Event.findByIdAndDelete(req.params.id);
+
+        res.json({ message: 'Event deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
