@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { IoMail, IoLockClosed, IoEye, IoEyeOff, IoPerson } from 'react-icons/io5';
 import { MdSportsSoccer } from 'react-icons/md';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function SignupPage() {
-    const { signup, loading } = useAuth();
+    const { signup, googleLogin, loading } = useAuth();
     const navigate = useNavigate();
     const [form, setForm] = useState({ name: '', email: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
@@ -16,6 +17,16 @@ export default function SignupPage() {
         e.preventDefault();
         setError('');
         const result = await signup(form.name, form.email, form.password);
+        if (result.success) {
+            navigate('/events');
+        } else {
+            setError(result.message);
+        }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse) => {
+        setError('');
+        const result = await googleLogin(credentialResponse);
         if (result.success) {
             navigate('/events');
         } else {
@@ -84,6 +95,33 @@ export default function SignupPage() {
                         </motion.div>
                     )}
 
+                    {/* Google Sign Up */}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                        <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={() => setError('Google sign-up failed. Please try again.')}
+                            theme="filled_black"
+                            shape="pill"
+                            size="large"
+                            width="320"
+                            text="signup_with"
+                        />
+                    </div>
+
+                    {/* Divider */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        marginBottom: '1.5rem',
+                    }}>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--color-border)' }} />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            or sign up with email
+                        </span>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--color-border)' }} />
+                    </div>
+
                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
                         <div>
                             <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.4rem', display: 'block' }}>
@@ -146,8 +184,6 @@ export default function SignupPage() {
                                 </button>
                             </div>
                         </div>
-
-
 
                         <motion.button
                             whileHover={{ scale: 1.02 }}

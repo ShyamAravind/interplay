@@ -40,13 +40,42 @@ export function AuthProvider({ children }) {
         }
     };
 
+    const googleLogin = async (credentialResponse) => {
+        setLoading(true);
+        try {
+            // Decode the JWT credential from Google
+            const payload = JSON.parse(atob(credentialResponse.credential.split('.')[1]));
+
+            const { data } = await API.post('/auth/google', {
+                googleId: payload.sub,
+                email: payload.email,
+                name: payload.name,
+                profilePhoto: payload.picture,
+            });
+
+            setUser(data);
+            localStorage.setItem('interplay_user', JSON.stringify(data));
+            return { success: true };
+        } catch (err) {
+            return { success: false, message: err.response?.data?.message || 'Google login failed' };
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateUser = (updatedData) => {
+        const newUser = { ...user, ...updatedData };
+        setUser(newUser);
+        localStorage.setItem('interplay_user', JSON.stringify(newUser));
+    };
+
     const logout = () => {
         setUser(null);
         localStorage.removeItem('interplay_user');
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, signup, googleLogin, updateUser, logout, loading }}>
             {children}
         </AuthContext.Provider>
     );

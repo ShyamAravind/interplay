@@ -34,12 +34,15 @@ router.post(
                 return res.status(400).json({ message: 'Email already registered' });
             }
 
-            const user = await User.create({ name, email, password });
+            const user = await User.create({ name, email, password, authProvider: 'local' });
 
             res.status(201).json({
                 _id: user._id,
                 name: user.name,
                 email: user.email,
+                profilePhoto: user.profilePhoto,
+                authProvider: user.authProvider,
+                createdAt: user.createdAt,
                 token: generateToken(user._id),
             });
         } catch (error) {
@@ -69,6 +72,10 @@ router.post(
                 return res.status(401).json({ message: 'Invalid credentials' });
             }
 
+            if (user.authProvider === 'google') {
+                return res.status(400).json({ message: 'This account uses Google Sign-In. Please sign in with Google.' });
+            }
+
             const isMatch = await user.comparePassword(password);
             if (!isMatch) {
                 return res.status(401).json({ message: 'Invalid credentials' });
@@ -78,6 +85,9 @@ router.post(
                 _id: user._id,
                 name: user.name,
                 email: user.email,
+                profilePhoto: user.profilePhoto,
+                authProvider: user.authProvider,
+                createdAt: user.createdAt,
                 token: generateToken(user._id),
             });
         } catch (error) {
@@ -85,6 +95,53 @@ router.post(
         }
     }
 );
+
+// POST /api/auth/google - Google OAuth login/signup
+router.post('/google', async (req, res) => {
+    try {
+        const { googleId, email, name, profilePhoto } = req.body;
+
+        if (!googleId || !email || !name) {
+            return res.status(400).json({ message: 'Missing Google auth data' });
+        }
+
+        // Check if user exists with this Google ID or email
+        let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+        if (user) {
+            // Update Google info if needed
+            if (!user.googleId) {
+                user.googleId = googleId;
+                user.authProvider = 'google';
+            }
+            if (profilePhoto && !user.profilePhoto) {
+                user.profilePhoto = profilePhoto;
+            }
+            await user.save();
+        } else {
+            // Create new user
+            user = await User.create({
+                name,
+                email,
+                googleId,
+                profilePhoto: profilePhoto || '',
+                authProvider: 'google',
+            });
+        }
+
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            profilePhoto: user.profilePhoto,
+            authProvider: user.authProvider,
+            createdAt: user.createdAt,
+            token: generateToken(user._id),
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Google auth failed', error: error.message });
+    }
+});
 
 // GET /api/auth/me
 const { protect } = require('../middleware/auth');

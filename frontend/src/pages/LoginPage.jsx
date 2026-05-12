@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { IoMail, IoLockClosed, IoEye, IoEyeOff } from 'react-icons/io5';
 import { MdSportsSoccer } from 'react-icons/md';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function LoginPage() {
-    const { login, loading } = useAuth();
+    const { login, googleLogin, loading } = useAuth();
     const navigate = useNavigate();
     const [form, setForm] = useState({ email: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
@@ -16,6 +17,16 @@ export default function LoginPage() {
         e.preventDefault();
         setError('');
         const result = await login(form.email, form.password);
+        if (result.success) {
+            navigate('/events');
+        } else {
+            setError(result.message);
+        }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse) => {
+        setError('');
+        const result = await googleLogin(credentialResponse);
         if (result.success) {
             navigate('/events');
         } else {
@@ -89,6 +100,33 @@ export default function LoginPage() {
                             {error}
                         </motion.div>
                     )}
+
+                    {/* Google Sign In */}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                        <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={() => setError('Google sign-in failed. Please try again.')}
+                            theme="filled_black"
+                            shape="pill"
+                            size="large"
+                            width="320"
+                            text="signin_with"
+                        />
+                    </div>
+
+                    {/* Divider */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        marginBottom: '1.5rem',
+                    }}>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--color-border)' }} />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            or sign in with email
+                        </span>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--color-border)' }} />
+                    </div>
 
                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div>
