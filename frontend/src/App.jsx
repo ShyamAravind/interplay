@@ -1,70 +1,163 @@
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { GoogleOAuthProvider } from '@react-oauth/google';
-import { AuthProvider } from './context/AuthContext';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import ProtectedRoute from './components/ProtectedRoute';
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
-import FeedPage from './pages/FeedPage';
-import EventDetailPage from './pages/EventDetailPage';
-import CreateEventPage from './pages/CreateEventPage';
-import ProfilePage from './pages/ProfilePage';
-import DashboardPage from './pages/DashboardPage';
-import ManageEventPage from './pages/ManageEventPage';
-import NearbyEventsPage from './pages/NearbyEventsPage';
+import { useState, useEffect, Suspense, lazy } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+} from "react-router-dom";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { AuthProvider } from "./context/AuthContext";
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com';
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import ProtectedRoute from "./components/ProtectedRoute";
+import ScrollToTop from "./components/ScrollToTop";
+import BackToTop from "./components/BackToTop";
+import LoadingScreen from "./components/LoadingScreen";
+import NotFoundPage from "./pages/NotFoundPage";
+
+// Lazy loaded pages
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const SignupPage = lazy(() => import("./pages/SignupPage"));
+const FeedPage = lazy(() => import("./pages/FeedPage"));
+const EventDetailPage = lazy(() => import("./pages/EventDetailPage"));
+const CreateEventPage = lazy(() => import("./pages/CreateEventPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const ManageEventPage = lazy(() => import("./pages/ManageEventPage"));
+const NearbyEventsPage = lazy(() => import("./pages/NearbyEventsPage"));
+
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com";
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(() => {
-    const stored = localStorage.getItem('interplay_theme');
-    return stored ? stored === 'dark' : true;
+    const savedTheme = localStorage.getItem("interplay_theme");
+
+    if (savedTheme) {
+      return savedTheme === "dark";
+    }
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
+  const [online, setOnline] = useState(navigator.onLine);
+
   useEffect(() => {
-    document.documentElement.className = darkMode ? 'dark' : 'light';
-    localStorage.setItem('interplay_theme', darkMode ? 'dark' : 'light');
+    document.documentElement.classList.toggle("dark", darkMode);
+    document.documentElement.classList.toggle("light", !darkMode);
+
+    localStorage.setItem(
+      "interplay_theme",
+      darkMode ? "dark" : "light"
+    );
   }, [darkMode]);
+
+  useEffect(() => {
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <AuthProvider>
         <Router>
-          <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-            <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
+          <ScrollToTop />
+
+          {!online && (
+            <div
+              style={{
+                background: "#ff4d4f",
+                color: "#fff",
+                padding: "8px",
+                textAlign: "center",
+                fontWeight: "bold",
+              }}
+            >
+              ⚠ You are currently offline
+            </div>
+          )}
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              minHeight: "100vh",
+            }}
+          >
+            <Navbar
+              darkMode={darkMode}
+              setDarkMode={setDarkMode}
+            />
+
             <main style={{ flex: 1 }}>
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/signup" element={<SignupPage />} />
-                <Route path="/events" element={<FeedPage />} />
-                <Route path="/events/:id" element={<EventDetailPage />} />
-                <Route path="/nearby" element={<NearbyEventsPage />} />
-                <Route path="/create" element={
-                  <ProtectedRoute>
-                    <CreateEventPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/profile" element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/manage/:id" element={
-                  <ProtectedRoute>
-                    <ManageEventPage />
-                  </ProtectedRoute>
-                } />
-              </Routes>
+              <Suspense fallback={<LoadingScreen />}>
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/events" element={<FeedPage />} />
+                  <Route
+                    path="/events/:id"
+                    element={<EventDetailPage />}
+                  />
+                  <Route
+                    path="/nearby"
+                    element={<NearbyEventsPage />}
+                  />
+
+                  <Route
+                    path="/create"
+                    element={
+                      <ProtectedRoute>
+                        <CreateEventPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <DashboardPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/manage/:id"
+                    element={
+                      <ProtectedRoute>
+                        <ManageEventPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* 404 Page */}
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </Suspense>
             </main>
+
+            <BackToTop />
             <Footer />
           </div>
         </Router>
